@@ -1,5 +1,7 @@
-#install pycryptodome
+# install install pycryptodome
+from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
+
 
 def generate_IV():
     return None
@@ -9,16 +11,18 @@ def main():
         file = open("cp-logo.bmp", "rb") # gives us raw bytes for encryption
     except FileNotFoundError:
         print("Error: File not found!!!")
+        return
 
     header = file.read(54)
-
     body = file.read()
+    file.close()
 
     # check the len of the body
+
     body_len = len(body) 
     print(body_len)
 
-    # apply PKCS#7
+    # 1) apply PKCS#7 (ensures that the body is in correct size)
     N = 16 - (body_len % 16)
 
     if (N) != 16:
@@ -28,13 +32,26 @@ def main():
 
     padded_body = body + padding_bytes
 
-    # print(len(padded_body) % 16)
+    # 2) key generation + cipher
+    key = get_random_bytes(16) 
 
-    # split padded body into 16-byte blocks
+    # each block of text in ECB will use the same cipher
+    cipher = AES.new(key, AES.MODE_ECB) 
 
-    # encrypt blocks using ECB or CBC
+    # 3) encrypt blocks using ECB or CBC
+    encrypted_body = b""
 
-    # write original header and encrypted body
+    # encrypt using ECB using the same cipher as stated before
+    for i in range(0, len(padded_body), 16):
+        block = padded_body[i:i+16]
+        ciphertext_block = cipher.encrypt(block)
+        encrypted_body += ciphertext_block 
 
-    file.close()
-    
+
+    # 4) write original header and encrypted body
+    with open("encrypted.bmp", "wb") as out_file:
+        out_file.write(header)
+        out_file.write(encrypted_body)
+
+if __name__ == "__main__":
+    main()
